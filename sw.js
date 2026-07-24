@@ -1,10 +1,11 @@
 // Bump this to match APP_VERSION in index.html whenever you ship a change —
 // it forces browsers to fetch fresh files instead of serving the old cache.
-const CACHE_NAME = 'beacon-app-v1.5.0';
+const CACHE_NAME = 'beacon-app-v1.6.0';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
+  './quotes.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
