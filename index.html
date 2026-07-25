@@ -583,6 +583,45 @@
     margin: 0 auto 14px;
     box-shadow: 0 4px 14px var(--shadow);
   }
+  .modal-close-x{
+    position: absolute;
+    top: 12px; right: 12px;
+    background: none;
+    border: none;
+    color: var(--ink-soft);
+    font-size: 1.4rem;
+    line-height: 1;
+    padding: 6px;
+  }
+  .modal-close-x:hover{ color: var(--ink); }
+  .install-cta{
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 0.95rem;
+  }
+  .install-cta-half{
+    flex: 1;
+    padding: 14px 20px;
+    font-size: 0.95rem;
+  }
+  .install-steps{
+    margin: 4px 0 0;
+    padding-left: 22px;
+    color: var(--ink);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .install-steps li{ margin-bottom: 6px; }
+  .text-link-row{
+    text-align: center;
+    margin: 14px 0 0;
+  }
+  .text-link-row a{
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    text-decoration: underline;
+  }
+  .text-link-row a:hover{ color: var(--ink); }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -2943,6 +2982,18 @@ function isStandaloneDisplay(){
 function isIOS(){
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 }
+function isInstallPromptSnoozed(){
+  try{
+    const until = parseInt(localStorage.getItem('beacon:installPromptSnoozeUntil') || '0', 10);
+    return Date.now() < until;
+  }catch(e){ return false; }
+}
+function snoozeInstallPromptOneWeek(){
+  try{
+    localStorage.setItem('beacon:installPromptSnoozeUntil', String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  }catch(e){}
+  closeModal();
+}
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
@@ -2954,30 +3005,86 @@ window.addEventListener('appinstalled', () => {
   closeModal();
 });
 
+// Entry point. Android/Chrome gets one simple step (the button triggers the
+// real native install dialog). iOS can't be triggered programmatically at
+// all, so it walks through a short confirm → instructions sequence instead.
 function showInstallPopup(){
-  if(isStandaloneDisplay()) return;
+  if(isStandaloneDisplay() || isInstallPromptSnoozed()) return;
+  if(isIOS()){
+    showInstallStep1();
+  } else {
+    showInstallAndroidPopup();
+  }
+}
+
+function installModalShell(bodyHtml){
   const root = document.getElementById('modalRoot');
-  const onIOS = isIOS();
   root.innerHTML = `
     <div class="overlay" onclick="if(event.target===this) dismissInstallPopup()">
-      <div class="modal install-modal">
-        <img src="icons/icon-192.png" alt="" class="install-modal-icon">
-        <h2 style="text-align:center;">Add Beacon to your Home Screen</h2>
-        <p class="sub" style="text-align:center;">
-          ${onIOS
-            ? 'Tap the Share icon in Safari\'s toolbar below, then choose "Add to Home Screen."'
-            : 'Get one-tap access from your phone or desktop, just like a regular app.'}
-        </p>
-        <div class="modal-actions" style="justify-content:center;">
-          <button class="btn-ghost" onclick="dismissInstallPopup()">Not now</button>
-          ${onIOS ? '' : '<button class="btn-primary" onclick="handleInstallClick()">Add to Home Screen</button>'}
-        </div>
+      <div class="modal install-modal" style="position:relative;">
+        <button class="modal-close-x" onclick="dismissInstallPopup()" aria-label="Skip">×</button>
+        ${bodyHtml}
       </div>
     </div>`;
   isModalOpen = true;
 }
+
+function showInstallAndroidPopup(){
+  installModalShell(`
+    <img src="icons/icon-192.png" alt="" class="install-modal-icon" onerror="this.style.display='none'">
+    <h2 style="text-align:center;">Add The Beacon App to your Home Screen</h2>
+    <p class="sub" style="text-align:center;">Add to your Home Screen for easier access to all Beacon tools.</p>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn-primary install-cta" onclick="handleInstallClick()">＋ Add to Home Screen</button>
+    </div>
+    <p class="text-link-row"><a href="#" onclick="event.preventDefault(); snoozeInstallPromptOneWeek();">Don't show me again</a></p>
+  `);
+}
+
+// Step 1: intro
+function showInstallStep1(){
+  installModalShell(`
+    <img src="icons/icon-192.png" alt="" class="install-modal-icon" onerror="this.style.display='none'">
+    <h2>Add to Home Screen</h2>
+    <p class="sub">Add to your Home Screen for easier access to all Beacon tools.</p>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn-primary install-cta" onclick="showInstallStep2()">＋ Add to Home Screen</button>
+    </div>
+    <p class="text-link-row"><a href="#" onclick="event.preventDefault(); snoozeInstallPromptOneWeek();">Don't show me again</a></p>
+  `);
+}
+
+// Step 2: quick confirm before showing the manual steps
+function showInstallStep2(){
+  installModalShell(`
+    <h2>Add to Home Screen?</h2>
+    <p class="sub">We'll show you the two steps to add it — it takes a moment.</p>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn-ghost install-cta-half" onclick="showInstallStep1()">Back</button>
+      <button class="btn-primary install-cta-half" onclick="showInstallStep3()">✓ Confirm</button>
+    </div>
+  `);
+}
+
+// Step 3: the actual manual instructions (this is the ceiling of what's
+// possible on iOS — Safari has no API to trigger this for us)
+function showInstallStep3(){
+  installModalShell(`
+    <h2>Add to Home Screen</h2>
+    <ol class="install-steps">
+      <li>Tap the <strong>Share</strong> button at the bottom of Safari.</li>
+      <li>Scroll down and tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
+    </ol>
+    <p class="hint">Safari doesn't let apps do this step for you — it has to be your tap.</p>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn-primary install-cta" onclick="dismissInstallPopup()">✓ Got it</button>
+    </div>
+    <p class="text-link-row"><a href="#" onclick="event.preventDefault(); snoozeInstallPromptOneWeek();">Don't show me again</a></p>
+  `);
+}
+
 function dismissInstallPopup(){
-  closeModal(); // reappears on next reload/visit unless actually installed
+  closeModal(); // reappears on next reload/visit unless actually installed or dismissed forever
 }
 async function handleInstallClick(){
   if(deferredInstallPrompt){
