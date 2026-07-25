@@ -506,7 +506,6 @@
     font-family: 'Fredoka', sans-serif;
     font-size: 0.82rem;
     color: var(--ink-soft);
-    font-style: italic;
   }
   .version-tag{
     display: inline-block;
@@ -3081,7 +3080,7 @@ if('serviceWorker' in navigator){
 
 let forms = [];
 let favorites = new Set();
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
 
 /* ---------- Deterministic weighted daily quote engine ----------
    Reads selection_config.periods + quotes from quotes.json (fetched at
@@ -3181,7 +3180,7 @@ function weightedThemePick(weightsObj, randValue){
 }
 
 // On 29 Feb, draw from this set instead of the enclosing period's themes.
-const LEAP_DAY_THEMES = { Renewal: 0.25, Reflection: 0.25, Growth: 0.25, Purpose: 0.25 };
+const LEAP_DAY_THEMES = { 'Fresh Starts': 0.25, Reflection: 0.25, Growth: 0.25, Purpose: 0.25 };
 const LEAP_DAY_PERIOD_ID = 'leap-day';
 
 /* Build the full annual schedule for `year` from the parsed quotes.json
@@ -3270,7 +3269,7 @@ async function initDailyQuote(){
     const today = getTodaysQuoteFromSchedule(schedule);
     const el = document.getElementById('dailyQuote');
     if(today && el){
-      el.textContent = `“${today.quote}”`; // author is metadata only — never displayed
+      el.textContent = `Quote of the Day: ${today.quote}`; // theme/type/id are metadata only — never displayed
     }
   }catch(e){
     console.error('Could not load daily quote', e);
@@ -3303,12 +3302,13 @@ let knownIds = new Set();
       noticeboard, but don't put anything sensitive in here.
 */
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyB56PJSKg1gXBYDGUjv-X7MEFV6zdd3ams",
+  authDomain: "beacon-app-c2c25.firebaseapp.com",
+  projectId: "beacon-app-c2c25",
+  storageBucket: "beacon-app-c2c25.firebasestorage.app",
+  messagingSenderId: "81422336834",
+  appId: "1:81422336834:web:3cc58393db30f462447edb",
+  measurementId: "G-0KP4NSYFGB"
 };
 let db = null;
 try{
